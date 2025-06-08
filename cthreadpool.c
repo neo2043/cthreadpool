@@ -63,9 +63,11 @@ void threadpool_add_work(const threadpool_t *threadpool, void *(*worker_func)(vo
 // threadpool wait
 void threadpool_wait(threadpool_t *threadpool) {
     pthread_mutex_lock(&threadpool->threadpool_thread_count_mutex);
-    while (threadpool->jobqueue->len || atomic_load(&threadpool->num_threads_working)) {
+    while ((pthread_mutex_lock(&threadpool->jobqueue->jobqueue_mutex), threadpool->jobqueue->len) || atomic_load(&threadpool->num_threads_working)) {
+		pthread_mutex_unlock(&threadpool->jobqueue->jobqueue_mutex);
         pthread_cond_wait(&threadpool->threadpool_thread_idle_cond, &threadpool->threadpool_thread_count_mutex);
     }
+	pthread_mutex_unlock(&threadpool->jobqueue->jobqueue_mutex);
     pthread_mutex_unlock(&threadpool->threadpool_thread_count_mutex);
 }
 
